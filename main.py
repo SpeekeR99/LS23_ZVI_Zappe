@@ -25,6 +25,8 @@ def impl_glfw_init():
 
     window = glfw.create_window(int(WINDOW_WIDTH), int(WINDOW_HEIGHT), window_name, None, None)
     glfw.make_context_current(window)
+    mode = glfw.get_video_mode(glfw.get_primary_monitor())
+    glfw.set_window_pos(window, int((mode.size.width - WINDOW_WIDTH) / 2), int((mode.size.height - WINDOW_HEIGHT) / 2))
 
     if not window:
         glfw.terminate()
@@ -45,8 +47,7 @@ def texture_image(img):
     return texture
 
 
-def show_image(img, window_name="Image"):
-    texture = texture_image(img)
+def show_image(texture, img, window_name="Image"):
     imgui.begin(window_name, True)
     imgui.image(texture, img.shape[1], img.shape[0])
     imgui.end()
@@ -57,8 +58,14 @@ def main():
     window = impl_glfw_init()
     impl = GlfwRenderer(window)
 
-    img = cv2.imread("lena.png", cv2.IMREAD_COLOR)
+    mode = glfw.get_video_mode(glfw.get_primary_monitor())
+
+    img = cv2.imread("img/lenna.png", cv2.IMREAD_COLOR)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    texture = texture_image(img)
+
+    fullscreen = False
+    show_settings_window = False
 
     while not glfw.window_should_close(window):
         glfw.poll_events()
@@ -67,26 +74,66 @@ def main():
         imgui.new_frame()
 
         if imgui.begin_main_menu_bar():
-            if imgui.begin_menu("File", True):
-
-                clicked_quit, selected_quit = imgui.menu_item(
-                    "Quit", 'Cmd+Q', False, True
-                )
-
-                if clicked_quit:
-                    exit(1)
-
+            if imgui.begin_menu("File"):
+                clicked_exit, selected_exit = imgui.menu_item("Exit", 'Alt+F4', False, True)
+                if clicked_exit:
+                    glfw.set_window_should_close(window, True)
+                imgui.end_menu()
+            if imgui.begin_menu("Edit"):
+                imgui.end_menu()
+            if imgui.begin_menu("Settings"):
+                clicked_settings, selected_settings = imgui.menu_item("Window Settings...", None, False, True)
+                if clicked_settings:
+                    show_settings_window = True
+                imgui.end_menu()
+            if imgui.begin_menu("Help"):
                 imgui.end_menu()
             imgui.end_main_menu_bar()
 
-        imgui.begin("Custom window", True)
-        imgui.text("Bar")
-        imgui.text_ansi("B\033[31marA\033[mnsi ")
-        imgui.text_ansi_colored("Eg\033[31mgAn\033[msi ", 0.2, 1., 0.)
-        imgui.extra.text_ansi_colored("Eggs", 0.2, 1., 0.)
-        imgui.end()
+        if show_settings_window:
+            imgui.set_next_window_size(600, 400, imgui.ONCE)
+            imgui.begin("Settings", True)
+            imgui.text("Window Settings")
+            global WINDOW_WIDTH, WINDOW_HEIGHT
+            if imgui.button("Set 1280x720"):
+                WINDOW_WIDTH = 1280
+                WINDOW_HEIGHT = 720
+                glfw.set_window_size(window, WINDOW_WIDTH, WINDOW_HEIGHT)
+                glfw.set_window_pos(window, int((mode.size.width - WINDOW_WIDTH) / 2),
+                                    int((mode.size.height - WINDOW_HEIGHT) / 2))
+            imgui.same_line()
+            if imgui.button("Set 1600x900"):
+                WINDOW_WIDTH = 1600
+                WINDOW_HEIGHT = 900
+                glfw.set_window_size(window, WINDOW_WIDTH, WINDOW_HEIGHT)
+                glfw.set_window_pos(window, int((mode.size.width - WINDOW_WIDTH) / 2),
+                                    int((mode.size.height - WINDOW_HEIGHT) / 2))
+            imgui.same_line()
+            if imgui.button("Set 1920x1080"):
+                WINDOW_WIDTH = 1920
+                WINDOW_HEIGHT = 1080
+                glfw.set_window_size(window, WINDOW_WIDTH, WINDOW_HEIGHT)
+                glfw.set_window_pos(window, int((mode.size.width - WINDOW_WIDTH) / 2),
+                                    int((mode.size.height - WINDOW_HEIGHT) / 2))
+            imgui.same_line()
+            if fullscreen:
+                if imgui.button("Windowed"):
+                    fullscreen = False
+                    WINDOW_WIDTH = 1280
+                    WINDOW_HEIGHT = 720
+                    glfw.set_window_monitor(window, None, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0)
+                    glfw.set_window_pos(window, int((mode.size.width - WINDOW_WIDTH) / 2),
+                                        int((mode.size.height - WINDOW_HEIGHT) / 2))
+            else:
+                if imgui.button("Fullscreen"):
+                    fullscreen = True
+                    WINDOW_WIDTH = mode.size.width
+                    WINDOW_HEIGHT = mode.size.height
+                    glfw.set_window_monitor(window, glfw.get_primary_monitor(), 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT,
+                                            mode.refresh_rate)
+            imgui.end()
 
-        show_image(img, "Lena")
+        show_image(texture, img, "Lena")
 
         gl.glClearColor(1., 1., 1., 1)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
