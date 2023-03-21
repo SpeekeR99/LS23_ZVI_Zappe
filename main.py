@@ -59,7 +59,7 @@ def texture_image(img):
 def show_image(name):
     global imgs
     imgui.set_next_window_size(imgs[name]["img"].shape[1] + 15, imgs[name]["img"].shape[0] + 35, imgui.ONCE)
-    _, close_bool = imgui.begin(name, True, imgui.WINDOW_NO_RESIZE)
+    _, close_bool = imgui.begin(name, True, imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_COLLAPSE)
     # window_size = imgui.get_window_size()
     # dx = window_size[0] - 15 - imgs[name]["original_size"][0]
     # dy = window_size[1] - 35 - imgs[name]["original_size"][1]
@@ -106,6 +106,8 @@ def main():
     mode = glfw.get_video_mode(glfw.get_primary_monitor())
 
     to_be_deleted = None
+    current_style = 0
+    background_color = (29. / 255, 29. / 255, 29. / 255)
 
     while not glfw.window_should_close(window):
         glfw.poll_events()
@@ -140,12 +142,6 @@ def main():
 
                 imgui.end_menu()
             if imgui.begin_menu("Edit"):
-                clicked_back, _ = imgui.menu_item("Back", None, False, True)
-                if clicked_back:
-                    pass
-
-                imgui.separator()
-
                 clicked_edge_detect, _ = imgui.menu_item("Edge Detection...", None, False, True)
                 if clicked_edge_detect:
                     show_edge_detection_window = True
@@ -179,7 +175,9 @@ def main():
                     to_be_deleted = name
 
         if show_save_as_dialog:
-            _, show_save_as_dialog = imgui.begin("Save Image as...", True)
+            imgui.set_next_window_size(500, 100, imgui.ONCE)
+            imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 100) / 2, imgui.ONCE)
+            _, show_save_as_dialog = imgui.begin("Save Image as...", True, imgui.WINDOW_NO_COLLAPSE)
             _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
             if imgui.button("Save as..."):
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
@@ -193,13 +191,16 @@ def main():
             imgui.end()
 
         if show_edge_detection_window:
-            _, show_edge_detection_window = imgui.begin("Edge Detection", True)
+            imgui.set_next_window_size(500, 500, imgui.ONCE)
+            imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 500) / 2, imgui.ONCE)
+            _, show_edge_detection_window = imgui.begin("Edge Detection", True, imgui.WINDOW_NO_COLLAPSE)
+            _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
             imgui.end()
 
         if show_settings_window:
             imgui.set_next_window_size(400, 200, imgui.ONCE)
             imgui.set_next_window_position(int((WINDOW_WIDTH - 400) / 2), int((WINDOW_HEIGHT - 200) / 2), imgui.ONCE)
-            _, show_settings_window = imgui.begin("Settings", True)
+            _, show_settings_window = imgui.begin("Settings", True, imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE)
             imgui.text("Window Settings")
             if imgui.button("Set 1280x720"):
                 WINDOW_WIDTH = 1280
@@ -237,6 +238,19 @@ def main():
                     WINDOW_HEIGHT = mode.size.height
                     glfw.set_window_monitor(window, glfw.get_primary_monitor(), 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT,
                                             mode.refresh_rate)
+
+            imgui.separator()
+            imgui.text("Style Settings")
+            _, current_style = imgui.combo("Style", current_style, ["Dark", "Light", "Classic"])
+            if current_style == 0:
+                imgui.style_colors_dark()
+                background_color = (29. / 255, 29. / 255, 29. / 255)
+            elif current_style == 1:
+                imgui.style_colors_light()
+                background_color = (240. / 255, 240. / 255, 240. / 255)
+            elif current_style == 2:
+                imgui.style_colors_classic()
+                background_color = (38. / 255, 38. / 255, 38. / 255)
             imgui.end()
 
         if show_about_window:
@@ -246,7 +260,7 @@ def main():
             imgui.text("This application was made by:\nDominik Zappe")
             imgui.end()
 
-        glClearColor(1., 1., 1., 1)
+        glClearColor(background_color[0], background_color[1], background_color[2], 1)
         glClear(GL_COLOR_BUFFER_BIT)
 
         imgui.render()
