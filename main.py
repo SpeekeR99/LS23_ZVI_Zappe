@@ -7,6 +7,10 @@ from imgui.integrations.glfw import GlfwRenderer
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
+fullscreen = False
+show_settings_window = False
+show_about_window = False
+show_edge_detection_window = False
 
 
 def impl_glfw_init():
@@ -48,12 +52,15 @@ def texture_image(img):
 
 
 def show_image(texture, img, window_name="Image"):
-    imgui.begin(window_name, True)
+    _, close_bool = imgui.begin(window_name, True)
     imgui.image(texture, img.shape[1], img.shape[0])
     imgui.end()
+    return close_bool
 
 
 def main():
+    global WINDOW_WIDTH, WINDOW_HEIGHT, fullscreen, show_settings_window, show_about_window, show_edge_detection_window
+
     imgui.create_context()
     window = impl_glfw_init()
     impl = GlfwRenderer(window)
@@ -64,9 +71,6 @@ def main():
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     texture = texture_image(img)
 
-    fullscreen = False
-    show_settings_window = False
-
     while not glfw.window_should_close(window):
         glfw.poll_events()
         impl.process_inputs()
@@ -75,26 +79,60 @@ def main():
 
         if imgui.begin_main_menu_bar():
             if imgui.begin_menu("File"):
-                clicked_exit, selected_exit = imgui.menu_item("Exit", 'Alt+F4', False, True)
+                clicked_new, _ = imgui.menu_item("New Blank Project", None, False, True)
+                if clicked_new:
+                    pass
+
+                clicked_load, _ = imgui.menu_item("Load Image...", None, False, True)
+                if clicked_load:
+                    pass
+
+                clicked_save, _ = imgui.menu_item("Save Image as...", None, False, True)
+                if clicked_save:
+                    pass
+
+                imgui.separator()
+
+                clicked_exit, _ = imgui.menu_item("Exit", 'Alt+F4', False, True)
                 if clicked_exit:
                     glfw.set_window_should_close(window, True)
+
                 imgui.end_menu()
             if imgui.begin_menu("Edit"):
+                clicked_back, _ = imgui.menu_item("Back", None, False, True)
+                if clicked_back:
+                    pass
+
+                imgui.separator()
+
+                clicked_edge_detect, _ = imgui.menu_item("Edge Detection...", None, False, True)
+                if clicked_edge_detect:
+                    show_edge_detection_window = True
+
                 imgui.end_menu()
             if imgui.begin_menu("Settings"):
-                clicked_settings, selected_settings = imgui.menu_item("Window Settings...", None, False, True)
+
+                clicked_settings, _ = imgui.menu_item("Window Settings...", None, False, True)
                 if clicked_settings:
                     show_settings_window = True
+
                 imgui.end_menu()
             if imgui.begin_menu("Help"):
+
+                clicked_about, _ = imgui.menu_item("About...", None, False, True)
+                if clicked_about:
+                    show_about_window = True
+
                 imgui.end_menu()
             imgui.end_main_menu_bar()
 
+
+
         if show_settings_window:
-            imgui.set_next_window_size(600, 400, imgui.ONCE)
-            imgui.begin("Settings", True)
+            imgui.set_next_window_size(400, 200, imgui.ONCE)
+            imgui.set_next_window_position(int((WINDOW_WIDTH - 400) / 2), int((WINDOW_HEIGHT - 200) / 2), imgui.ONCE)
+            _, show_settings_window = imgui.begin("Settings", True)
             imgui.text("Window Settings")
-            global WINDOW_WIDTH, WINDOW_HEIGHT
             if imgui.button("Set 1280x720"):
                 WINDOW_WIDTH = 1280
                 WINDOW_HEIGHT = 720
@@ -133,7 +171,12 @@ def main():
                                             mode.refresh_rate)
             imgui.end()
 
-        show_image(texture, img, "Lena")
+        if show_about_window:
+            imgui.set_next_window_size(300, 100, imgui.ALWAYS)
+            imgui.set_next_window_position(int((WINDOW_WIDTH - 300) / 2), int((WINDOW_HEIGHT - 100) / 2), imgui.ALWAYS)
+            _, show_about_window = imgui.begin("About", True, imgui.WINDOW_ALWAYS_AUTO_RESIZE | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_NAV | imgui.WINDOW_NO_COLLAPSE)
+            imgui.text("This application was made by:\nDominik Zappe")
+            imgui.end()
 
         gl.glClearColor(1., 1., 1., 1)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
