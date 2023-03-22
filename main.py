@@ -21,7 +21,7 @@ canny_upper_thresh = 200
 
 
 def impl_glfw_init():
-    window_name = "Main Window"
+    window_name = "Edge Detection Semestral Work"
 
     if not glfw.init():
         print("Could not initialize OpenGL context")
@@ -50,11 +50,12 @@ def impl_glfw_init():
 def texture_image(img):
     texture = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, texture)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.shape[1], img.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, img)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.shape[1], img.shape[0], 0, GL_BGR, GL_UNSIGNED_BYTE, img)
     glBindTexture(GL_TEXTURE_2D, 0)
     return texture
 
@@ -107,7 +108,8 @@ def load_image(filepath):
     filepath = filepath.replace("\\", "/")
     try:
         img = cv2.imread(filepath, cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        if img is None:
+            raise Exception()
     except Exception:
         print("Error loading image: " + filepath + "!")
         return
@@ -125,17 +127,12 @@ def my_text_separator(text):
 def generate_button_callback():
     global imgs
     if current_edge_detection_method == 0:
-        if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
-            print("No image selected!")
-        else:
-            img = imgs[list(imgs.keys())[current_img]]["img"]
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-            img = cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            render_img, texture = create_render_img_and_texture(img)
-            name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (Canny)." + list(imgs.keys())[current_img].split(".")[-1])
-            imgs[name] = {"img": img, "render_img": render_img, "texture": texture,
-                          "show": True, "original_size": (img.shape[1], img.shape[0])}
+        img = imgs[list(imgs.keys())[current_img]]["img"]
+        img = cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
+        render_img, texture = create_render_img_and_texture(img)
+        name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (Canny)." + list(imgs.keys())[current_img].split(".")[-1])
+        imgs[name] = {"img": img, "render_img": render_img, "texture": texture,
+                      "show": True, "original_size": (img.shape[1], img.shape[0])}
 
 
 def main():
@@ -240,7 +237,6 @@ def main():
                     filepath = wx.FileSelector("Save Image as...", default_filename=list(imgs.keys())[current_img], wildcard="Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp", flags=wx.FD_SAVE)
                     if filepath:
                         img = imgs[list(imgs.keys())[current_img]]["img"]
-                        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                         cv2.imwrite(filepath, img)
 
             imgui.end()
