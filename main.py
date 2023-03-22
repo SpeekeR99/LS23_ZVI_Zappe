@@ -50,12 +50,12 @@ def impl_glfw_init():
 def texture_image(img):
     texture = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, texture)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.shape[1], img.shape[0], 0, GL_BGR, GL_UNSIGNED_BYTE, img)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.shape[1], img.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, img)
     glBindTexture(GL_TEXTURE_2D, 0)
     return texture
 
@@ -110,6 +110,7 @@ def load_image(filepath):
         img = cv2.imread(filepath, cv2.IMREAD_COLOR)
         if img is None:
             raise Exception()
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     except Exception:
         print("Error loading image: " + filepath + "!")
         return
@@ -128,7 +129,9 @@ def generate_button_callback():
     global imgs
     if current_edge_detection_method == 0:
         img = imgs[list(imgs.keys())[current_img]]["img"]
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         img = cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         render_img, texture = create_render_img_and_texture(img)
         name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (Canny)." + list(imgs.keys())[current_img].split(".")[-1])
         imgs[name] = {"img": img, "render_img": render_img, "texture": texture,
@@ -237,6 +240,7 @@ def main():
                     filepath = wx.FileSelector("Save Image as...", default_filename=list(imgs.keys())[current_img], wildcard="Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp", flags=wx.FD_SAVE)
                     if filepath:
                         img = imgs[list(imgs.keys())[current_img]]["img"]
+                        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                         cv2.imwrite(filepath, img)
 
             imgui.end()
