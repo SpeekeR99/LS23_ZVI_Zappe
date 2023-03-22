@@ -120,10 +120,12 @@ def main():
             if imgui.begin_menu("File"):
                 clicked_new, _ = imgui.menu_item("New Blank Project", None, False, True)
                 if clicked_new:
-                    imgs = {}
-                    show_edge_detection_window = False
-                    show_about_window = False
-                    show_settings_window = False
+                    sure = wx.MessageDialog(None, "Are you sure you want to create a new project? All unsaved changes will be lost!", "New Project", wx.YES_NO | wx.ICON_QUESTION).ShowModal()
+                    if sure == wx.ID_YES:
+                        imgs = {}
+                        show_edge_detection_window = False
+                        show_about_window = False
+                        show_settings_window = False
 
                 clicked_load, _ = imgui.menu_item("Load Image...", None, False, True)
                 if clicked_load:
@@ -173,7 +175,11 @@ def main():
             if imgs[name]["show"]:
                 imgs[name]["show"] = show_image(name)
                 if not imgs[name]["show"]:
-                    to_be_deleted = name
+                    sure = wx.MessageDialog(None, "Are you sure you want to delete " + name + "? All unsaved changes will be lost!", "Delete Image", wx.YES_NO | wx.ICON_QUESTION).ShowModal()
+                    if sure == wx.ID_YES:
+                        to_be_deleted = name
+                    else:
+                        imgs[name]["show"] = True
 
         if show_save_as_dialog:
             imgui.set_next_window_size(500, 100, imgui.ONCE)
