@@ -59,14 +59,14 @@ def texture_image(img):
 def show_image(name):
     global imgs
     imgui.set_next_window_size(imgs[name]["img"].shape[1] + 15, imgs[name]["img"].shape[0] + 35, imgui.ONCE)
-    _, close_bool = imgui.begin(name, True, imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_COLLAPSE)
-    # window_size = imgui.get_window_size()
-    # dx = window_size[0] - 15 - imgs[name]["original_size"][0]
-    # dy = window_size[1] - 35 - imgs[name]["original_size"][1]
-    # scale = min((imgs[name]["original_size"][0] + dx) / (imgs[name]["original_size"][0]), (imgs[name]["original_size"][1] + dy) / (imgs[name]["original_size"][1]))
-    # if dx or dy:
-    #     imgs[name]["img"] = cv2.resize(imgs[name]["img"], (int(imgs[name]["original_size"][0] * scale), int(imgs[name]["original_size"][1] * scale)))
-    imgui.image(imgs[name]["texture"], imgs[name]["img"].shape[1], imgs[name]["img"].shape[0])
+    _, close_bool = imgui.begin(name, True, imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_COLLAPSE)
+    window_size = imgui.get_window_size()
+    dx = window_size[0] - 15 - imgs[name]["original_size"][0]
+    dy = window_size[1] - 35 - imgs[name]["original_size"][1]
+    scale = min((imgs[name]["original_size"][0] + dx) / (imgs[name]["original_size"][0]), (imgs[name]["original_size"][1] + dy) / (imgs[name]["original_size"][1]))
+    if dx or dy:
+        imgs[name]["render_img"] = cv2.resize(imgs[name]["render_img"], (int(imgs[name]["original_size"][0] * scale), int(imgs[name]["original_size"][1] * scale)))
+    imgui.image(imgs[name]["texture"], imgs[name]["render_img"].shape[1], imgs[name]["render_img"].shape[0])
     imgui.end()
     return close_bool
 
@@ -80,6 +80,7 @@ def load_image(filepath):
     except Exception:
         print("Error loading image: " + filepath + "!")
         return
+    render_img = np.copy(img)
     name = filepath.split("/")[-1].split(".")[0]
     extension = filepath.split("/")[-1].split(".")[-1]
     copy = 1
@@ -91,7 +92,7 @@ def load_image(filepath):
             name = name + "(" + str(copy) + ")"
         copy += 1
     name = name + "." + extension
-    imgs[name] = {"img": img, "texture": texture_image(img), "show": True, "original_size": (img.shape[1], img.shape[0])}
+    imgs[name] = {"img": img, "render_img": render_img, "texture": texture_image(render_img), "show": True, "original_size": (img.shape[1], img.shape[0])}
 
 
 def main():
