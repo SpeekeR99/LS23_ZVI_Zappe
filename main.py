@@ -61,7 +61,7 @@ def texture_image(img):
 
 def show_image(name):
     global imgs
-    imgui.set_next_window_size(imgs[name]["img"].shape[1] + 15, imgs[name]["img"].shape[0] + 35, imgui.ONCE)
+    imgui.set_next_window_size(imgs[name]["render_img"].shape[1] + 15, imgs[name]["render_img"].shape[0] + 35, imgui.ONCE)
     _, close_bool = imgui.begin(name, True, imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_COLLAPSE)
     window_size = imgui.get_window_size()
     dx = window_size[0] - 15 - imgs[name]["original_size"][0]
@@ -73,6 +73,19 @@ def show_image(name):
     imgui.image(imgs[name]["texture"], imgs[name]["render_img"].shape[1], imgs[name]["render_img"].shape[0])
     imgui.end()
     return close_bool
+
+
+def create_render_img_and_texture(img):
+    render_img = np.copy(img)
+    texture = texture_image(render_img)
+    dx = WINDOW_WIDTH * 0.4 - render_img.shape[0]
+    dy = WINDOW_HEIGHT * 0.4 - render_img.shape[1]
+    if abs(dx) < abs(dy):
+        scale = (render_img.shape[0] + dx) / (render_img.shape[0])
+    else:
+        scale = (render_img.shape[1] + dy) / (render_img.shape[1])
+    render_img = cv2.resize(render_img, (int(render_img.shape[1] * scale), int(render_img.shape[0] * scale)))
+    return render_img, texture
 
 
 def avoid_name_duplicates(filepath):
@@ -98,9 +111,9 @@ def load_image(filepath):
     except Exception:
         print("Error loading image: " + filepath + "!")
         return
-    render_img = np.copy(img)
+    render_img, texture = create_render_img_and_texture(img)
     name = avoid_name_duplicates(filepath)
-    imgs[name] = {"img": img, "render_img": render_img, "texture": texture_image(render_img), "show": True, "original_size": (img.shape[1], img.shape[0])}
+    imgs[name] = {"img": img, "render_img": render_img, "texture": texture, "show": True, "original_size": (img.shape[1], img.shape[0])}
 
 
 def my_text_separator(text):
@@ -119,9 +132,9 @@ def generate_button_callback():
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             img = cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            render_img = np.copy(img)
+            render_img, texture = create_render_img_and_texture(img)
             name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (Canny)." + list(imgs.keys())[current_img].split(".")[-1])
-            imgs[name] = {"img": img, "render_img": render_img, "texture": texture_image(render_img),
+            imgs[name] = {"img": img, "render_img": render_img, "texture": texture,
                           "show": True, "original_size": (img.shape[1], img.shape[0])}
 
 
@@ -214,9 +227,12 @@ def main():
         if show_save_as_dialog:
             imgui.set_next_window_size(500, 100, imgui.ONCE)
             imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 100) / 2, imgui.ONCE)
+
             _, show_save_as_dialog = imgui.begin("Save Image as...", True, imgui.WINDOW_NO_COLLAPSE)
+
             imgui.text("Image Selection:")
             _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
+
             if imgui.button("Save as..."):
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
                     print("No image selected!")
@@ -226,34 +242,47 @@ def main():
                         img = imgs[list(imgs.keys())[current_img]]["img"]
                         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                         cv2.imwrite(filepath, img)
+
             imgui.end()
 
         if show_edge_detection_window:
             imgui.set_next_window_size(500, 500, imgui.ONCE)
             imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 500) / 2, imgui.ONCE)
+
             _, show_edge_detection_window = imgui.begin("Edge Detection", True, imgui.WINDOW_NO_COLLAPSE)
+
             my_text_separator("Image Selection")
             _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
+
             my_text_separator("Edge Detection Method")
             _, current_edge_detection_method = imgui.combo("Edge Detection Method", current_edge_detection_method, ["Canny"])
+
             if current_edge_detection_method == 0:
                 imgui.text("Canny Thresholds:")
                 old_lower = canny_lower_thresh
                 old_upper = canny_upper_thresh
                 _, canny_lower_thresh = imgui.slider_int("Lower Threshold", canny_lower_thresh, 0, 254)
                 _, canny_upper_thresh = imgui.slider_int("Upper Threshold", canny_upper_thresh, 1, 255)
+
                 if old_lower != canny_lower_thresh and canny_lower_thresh >= canny_upper_thresh:
                     canny_upper_thresh = canny_lower_thresh + 1
                 if old_upper != canny_upper_thresh and canny_upper_thresh <= canny_lower_thresh:
                     canny_lower_thresh = canny_upper_thresh - 1
+
             if imgui.button("Generate"):
-                generate_button_callback()
+                if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
+                    print("No image selected!")
+                else:
+                    generate_button_callback()
+
             imgui.end()
 
         if show_settings_window:
             imgui.set_next_window_size(400, 200, imgui.ONCE)
             imgui.set_next_window_position(int((WINDOW_WIDTH - 400) / 2), int((WINDOW_HEIGHT - 200) / 2), imgui.ONCE)
+
             _, show_settings_window = imgui.begin("Settings", True, imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE)
+
             my_text_separator("Window Settings")
             if imgui.button("Set 1280x720"):
                 WINDOW_WIDTH = 1280
@@ -294,6 +323,7 @@ def main():
 
             my_text_separator("Style Settings")
             _, current_style = imgui.combo("Style", current_style, ["Dark", "Light", "Classic"])
+
             if current_style == 0:
                 imgui.style_colors_dark()
                 background_color = (29. / 255, 29. / 255, 29. / 255)
@@ -303,13 +333,16 @@ def main():
             elif current_style == 2:
                 imgui.style_colors_classic()
                 background_color = (38. / 255, 38. / 255, 38. / 255)
+
             imgui.end()
 
         if show_about_window:
             imgui.set_next_window_size(300, 100, imgui.ALWAYS)
             imgui.set_next_window_position(int((WINDOW_WIDTH - 300) / 2), int((WINDOW_HEIGHT - 100) / 2), imgui.ALWAYS)
+
             _, show_about_window = imgui.begin("About", True, imgui.WINDOW_ALWAYS_AUTO_RESIZE | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_NAV | imgui.WINDOW_NO_COLLAPSE)
             imgui.text("This application was made by:\nDominik Zappe")
+
             imgui.end()
 
         glClearColor(background_color[0], background_color[1], background_color[2], 1)
