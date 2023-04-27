@@ -8,13 +8,16 @@ import wx
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-fullscreen = False
+
 show_settings_window = False
 show_about_window = False
 show_edge_detection_window = False
 show_save_as_dialog = False
+
 imgs = {}
 current_img = 0
+
+edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
 current_edge_detection_method = 0
 canny_lower_thresh = 100
 canny_upper_thresh = 200
@@ -106,14 +109,11 @@ def avoid_name_duplicates(filepath):
 def load_image(filepath):
     global imgs
     filepath = filepath.replace("\\", "/")
-    try:
-        img = cv2.imread(filepath, cv2.IMREAD_COLOR)
-        if img is None:
-            raise Exception()
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    except Exception:
+    img = cv2.imread(filepath, cv2.IMREAD_COLOR)
+    if img is None:
         print("Error loading image: " + filepath + "!")
         return
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     render_img, texture = create_render_img_and_texture(img)
     name = avoid_name_duplicates(filepath)
     imgs[name] = {"img": img, "render_img": render_img, "texture": texture, "show": True, "original_size": (img.shape[1], img.shape[0])}
@@ -125,21 +125,62 @@ def my_text_separator(text):
     imgui.separator()
 
 
+def defined_direction_edge_detection(img):
+    print("defined_direction_edge_detection")
+    return img
+
+
+def gradient_magnitude_direction_edge_detection(img):
+    print("gradient_magnitude_direction_edge_detection")
+    return img
+
+
+def mask_methods_edge_detection(img):
+    print("mask_methods_edge_detection")
+    return img
+
+
+def laplacian_operator_edge_detection(img):
+    print("laplacian_operator_edge_detection")
+    return img
+
+
+def line_detection_edge_detection(img):
+    print("line_detection_edge_detection")
+    return img
+
+
+def point_detection_edge_detection(img):
+    print("point_detection_edge_detection")
+    return img
+
+
+def canny_edge_detection(img):
+    print("canny_edge_detection")
+    res = cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
+    return res
+
+
+def marr_hildreth_edge_detection(img):
+    print("marr_hildreth_edge_detection")
+    return img
+
+
 def generate_button_callback():
     global imgs
-    if current_edge_detection_method == 0:
-        img = imgs[list(imgs.keys())[current_img]]["img"]
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        img = cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        render_img, texture = create_render_img_and_texture(img)
-        name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (Canny)." + list(imgs.keys())[current_img].split(".")[-1])
-        imgs[name] = {"img": img, "render_img": render_img, "texture": texture,
-                      "show": True, "original_size": (img.shape[1], img.shape[0])}
+    edge_detection = [defined_direction_edge_detection, gradient_magnitude_direction_edge_detection, mask_methods_edge_detection, laplacian_operator_edge_detection, line_detection_edge_detection, point_detection_edge_detection, canny_edge_detection, marr_hildreth_edge_detection]
+    img = imgs[list(imgs.keys())[current_img]]["img"]
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    res = edge_detection[current_edge_detection_method](img)
+    res = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
+    render_res, texture = create_render_img_and_texture(res)
+    name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (" + edge_detection_methods[current_edge_detection_method] + ")." + list(imgs.keys())[current_img].split(".")[-1])
+    imgs[name] = {"img": res, "render_img": render_res, "texture": texture,
+                  "show": True, "original_size": (res.shape[1], res.shape[0])}
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, fullscreen, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -255,9 +296,9 @@ def main():
             _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
 
             my_text_separator("Edge Detection Method")
-            _, current_edge_detection_method = imgui.combo("Edge Detection Method", current_edge_detection_method, ["Canny"])
+            _, current_edge_detection_method = imgui.combo("Edge Detection Method", current_edge_detection_method, edge_detection_methods)
 
-            if current_edge_detection_method == 0:
+            if current_edge_detection_method == 6:
                 imgui.text("Canny Thresholds:")
                 old_lower = canny_lower_thresh
                 old_upper = canny_upper_thresh
@@ -304,22 +345,6 @@ def main():
                 glfw.set_window_size(window, WINDOW_WIDTH, WINDOW_HEIGHT)
                 glfw.set_window_pos(window, int((mode.size.width - WINDOW_WIDTH) / 2),
                                     int((mode.size.height - WINDOW_HEIGHT) / 2))
-            imgui.same_line()
-            if fullscreen:
-                if imgui.button("Windowed"):
-                    fullscreen = False
-                    WINDOW_WIDTH = 1280
-                    WINDOW_HEIGHT = 720
-                    glfw.set_window_monitor(window, None, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0)
-                    glfw.set_window_pos(window, int((mode.size.width - WINDOW_WIDTH) / 2),
-                                        int((mode.size.height - WINDOW_HEIGHT) / 2))
-            else:
-                if imgui.button("Fullscreen"):
-                    fullscreen = True
-                    WINDOW_WIDTH = mode.size.width
-                    WINDOW_HEIGHT = mode.size.height
-                    glfw.set_window_monitor(window, glfw.get_primary_monitor(), 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT,
-                                            mode.refresh_rate)
 
             my_text_separator("Style Settings")
             _, current_style = imgui.combo("Style", current_style, ["Dark", "Light", "Classic"])
