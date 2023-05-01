@@ -39,6 +39,8 @@ default_mask_3 = np.array([[1, 1, 1], [1, -8, 1], [1, 1, 1]])
 default_mask_5 = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, -24, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]])
 mask_methods_kernel = default_mask_3
 
+point_detection_threshold = 50
+
 canny_lower_thresh = 100
 canny_upper_thresh = 200
 
@@ -243,8 +245,8 @@ def laplacian_operator_edge_detection(img):
 
 def line_detection_edge_detection(img):
     res = np.copy(img)
-
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
     lines = cv2.HoughLinesP(img, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=10)
     for line in lines:
         x1, y1, x2, y2 = line[0]
@@ -254,8 +256,16 @@ def line_detection_edge_detection(img):
 
 
 def point_detection_edge_detection(img):
-    print("point_detection_edge_detection")
-    return img
+    res = np.copy(img)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    mask = np.array([[-1/8, -1/8, -1/8], [-1/8, 1, -1/8], [-1/8, -1/8, -1/8]])
+
+    for i in range(1, img.shape[0] - 1):
+        for j in range(1, img.shape[1] - 1):
+            if np.sum(img[i - 1:i + 2, j - 1:j + 2] * mask) > point_detection_threshold:
+                res[i, j] = [0, 0, 255]
+
+    return res
 
 
 def canny_edge_detection(img):
@@ -298,7 +308,7 @@ def threshold_button_callback():
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -490,7 +500,7 @@ def main():
                 pass
 
             elif current_edge_detection_method == 5:  # Point Detection
-                pass
+                _, point_detection_threshold = imgui.slider_int("Threshold", point_detection_threshold, 0, 255)
 
             elif current_edge_detection_method == 6:  # Canny Edge Detection
                 imgui.text("Canny Thresholds:")
