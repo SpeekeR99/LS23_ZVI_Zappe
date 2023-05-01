@@ -26,6 +26,12 @@ current_edge_detection_method = 0
 
 laplacian_square = True
 
+mask_size = 3
+default_mask_2 = np.array([[1, 0], [0, -1]])
+default_mask_3 = np.array([[1, 1, 1], [1, -8, 1], [1, 1, 1]])
+default_mask_5 = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, -24, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]])
+mask_methods_kernel = default_mask_3
+
 canny_lower_thresh = 100
 canny_upper_thresh = 200
 
@@ -160,8 +166,9 @@ def gradient_magnitude_direction_edge_detection(img):
 
 
 def mask_methods_edge_detection(img):
-    print("mask_methods_edge_detection")
-    return img
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    res = cv2.filter2D(img, -1, mask_methods_kernel)
+    return res
 
 
 def laplacian_operator_edge_detection(img):
@@ -215,7 +222,7 @@ def generate_button_callback():
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -349,7 +356,26 @@ def main():
             elif current_edge_detection_method == 1:  # Gradient Magnitude
                 pass
             elif current_edge_detection_method == 2:  # Mask Methods
-                pass
+                mask_size_changed, mask_size = imgui.slider_int("Mask Size", mask_size, 2, 5)
+                if mask_size_changed:
+                    if mask_size % 2 == 0 and mask_size != 2:
+                        mask_size += 1
+                    if mask_size == 2:
+                        mask_methods_kernel = default_mask_2
+                    elif mask_size == 3:
+                        mask_methods_kernel = default_mask_3
+                    elif mask_size == 5:
+                        mask_methods_kernel = default_mask_5
+                imgui.text("Mask:")
+                imgui.push_style_var(imgui.STYLE_ITEM_SPACING, (5, 5))
+                imgui.push_item_width(30)
+                for i in range(0, mask_size):
+                    for j in range(0, mask_size):
+                        _, mask_methods_kernel[i][j] = imgui.input_int("##" + str(i) + str(j), mask_methods_kernel[i][j], 0, 0)
+                        if j != mask_size - 1:
+                            imgui.same_line()
+                imgui.pop_item_width()
+                imgui.pop_style_var()
             elif current_edge_detection_method == 3:  # Laplacian Operator
                 imgui.text("Laplacian Kernel Type:")
                 if imgui.radio_button("Cross", not laplacian_square):
