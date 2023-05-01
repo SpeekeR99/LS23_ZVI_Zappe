@@ -17,10 +17,13 @@ show_save_as_dialog = False
 imgs = {}
 current_img = 0
 
+current_defined_direction_method = 0
+defined_direction_horizontal = True
+defined_direction_vertical = False
+
 edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
 current_edge_detection_method = 0
 
-laplacian_cross = False
 laplacian_square = True
 
 canny_lower_thresh = 100
@@ -130,8 +133,25 @@ def my_text_separator(text):
 
 
 def defined_direction_edge_detection(img):
-    print("defined_direction_edge_detection")
-    return img
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    horizontal_kernel = np.ones((3, 3))
+    vertical_kernel = np.ones((3, 3))
+    if current_defined_direction_method == 0:  # Sobel
+        horizontal_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+        vertical_kernel = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+    elif current_defined_direction_method == 1:  # Prewitt
+        horizontal_kernel = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
+        vertical_kernel = np.array([[-1, -1, -1], [0, 0, 0], [1, 1, 1]])
+    elif current_defined_direction_method == 2:  # Roberts
+        horizontal_kernel = np.array([[1, 0], [0, -1]])
+        vertical_kernel = np.array([[0, 1], [-1, 0]])
+    if defined_direction_horizontal:
+        res = cv2.filter2D(img, -1, horizontal_kernel)
+    elif defined_direction_vertical:
+        res = cv2.filter2D(img, -1, vertical_kernel)
+    else:
+        res = cv2.filter2D(img, -1, horizontal_kernel) + cv2.filter2D(img, -1, vertical_kernel)
+    return res
 
 
 def gradient_magnitude_direction_edge_detection(img):
@@ -195,7 +215,7 @@ def generate_button_callback():
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_cross, laplacian_square, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -314,18 +334,27 @@ def main():
             _, current_edge_detection_method = imgui.combo("Edge Detection Method", current_edge_detection_method, edge_detection_methods)
 
             if current_edge_detection_method == 0:  # Defined Direction
-                pass
+                _, current_defined_direction_method = imgui.combo("Method", current_defined_direction_method, ["Sobel", "Prewitt", "Roberts"])
+                imgui.text("Direction:")
+                if imgui.radio_button("Horizontal", defined_direction_horizontal):
+                    defined_direction_horizontal = True
+                    defined_direction_vertical = False
+                if imgui.radio_button("Vertical", defined_direction_vertical):
+                    defined_direction_horizontal = False
+                    defined_direction_vertical = True
+                if imgui.radio_button("Both", not defined_direction_horizontal and not defined_direction_vertical):
+                    defined_direction_horizontal = False
+                    defined_direction_vertical = False
+
             elif current_edge_detection_method == 1:  # Gradient Magnitude
                 pass
             elif current_edge_detection_method == 2:  # Mask Methods
                 pass
             elif current_edge_detection_method == 3:  # Laplacian Operator
                 imgui.text("Laplacian Kernel Type:")
-                if imgui.radio_button("Cross", laplacian_cross):
-                    laplacian_cross = True
+                if imgui.radio_button("Cross", not laplacian_square):
                     laplacian_square = False
                 if imgui.radio_button("Square", laplacian_square):
-                    laplacian_cross = False
                     laplacian_square = True
             elif current_edge_detection_method == 4:  # Line Detection
                 pass
