@@ -17,12 +17,15 @@ show_save_as_dialog = False
 imgs = {}
 current_img = 0
 
+edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
+current_edge_detection_method = 0
+
 current_defined_direction_method = 0
 defined_direction_horizontal = True
 defined_direction_vertical = False
 
-edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
-current_edge_detection_method = 0
+forward_difference = True
+backward_difference = False
 
 laplacian_square = True
 
@@ -161,8 +164,55 @@ def defined_direction_edge_detection(img):
 
 
 def gradient_magnitude_direction_edge_detection(img):
-    print("gradient_magnitude_direction_edge_detection")
-    return img
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    img = np.float32(img)
+    forward_difference_x = np.zeros(img.shape, dtype=np.float32)
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1] - 1):
+            forward_difference_x[i, j] = abs(img[i, j + 1] - img[i, j])
+    forward_difference_y = np.zeros(img.shape, dtype=np.float32)
+    for i in range(img.shape[0] - 1):
+        for j in range(img.shape[1]):
+            forward_difference_y[i, j] = abs(img[i + 1, j] - img[i, j])
+    backward_difference_x = np.zeros(img.shape, dtype=np.float32)
+    for i in range(img.shape[0]):
+        for j in range(1, img.shape[1]):
+            backward_difference_x[i, j] = abs(img[i, j] - img[i, j - 1])
+    backward_difference_y = np.zeros(img.shape, dtype=np.float32)
+    for i in range(1, img.shape[0]):
+        for j in range(img.shape[1]):
+            backward_difference_y[i, j] = abs(img[i, j] - img[i - 1, j])
+    central_difference_x = backward_difference_x + forward_difference_x / 2
+    central_difference_y = backward_difference_y + forward_difference_y / 2
+
+    forward_difference_x = forward_difference_x.astype(np.uint8)
+    forward_difference_y = forward_difference_y.astype(np.uint8)
+    backward_difference_x = backward_difference_x.astype(np.uint8)
+    backward_difference_y = backward_difference_y.astype(np.uint8)
+    central_difference_x = central_difference_x.astype(np.uint8)
+    central_difference_y = central_difference_y.astype(np.uint8)
+
+    if forward_difference:
+        if defined_direction_horizontal:
+            return forward_difference_x
+        elif defined_direction_vertical:
+            return forward_difference_y
+        else:
+            return forward_difference_x + forward_difference_y
+    elif backward_difference:
+        if defined_direction_horizontal:
+            return backward_difference_x
+        elif defined_direction_vertical:
+            return backward_difference_y
+        else:
+            return backward_difference_x + backward_difference_y
+    else:
+        if defined_direction_horizontal:
+            return central_difference_x
+        elif defined_direction_vertical:
+            return central_difference_y
+        else:
+            return central_difference_x + central_difference_y
 
 
 def mask_methods_edge_detection(img):
@@ -222,7 +272,7 @@ def generate_button_callback():
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -354,7 +404,27 @@ def main():
                     defined_direction_vertical = False
 
             elif current_edge_detection_method == 1:  # Gradient Magnitude
-                pass
+                imgui.text("Difference Method:")
+                if imgui.radio_button("Forward", forward_difference):
+                    forward_difference = True
+                    backward_difference = False
+                if imgui.radio_button("Backward", backward_difference):
+                    forward_difference = False
+                    backward_difference = True
+                if imgui.radio_button("Central", not forward_difference and not backward_difference):
+                    forward_difference = False
+                    backward_difference = False
+                imgui.text("Direction:")
+                if imgui.radio_button("Horizontal", defined_direction_horizontal):
+                    defined_direction_horizontal = True
+                    defined_direction_vertical = False
+                if imgui.radio_button("Vertical", defined_direction_vertical):
+                    defined_direction_horizontal = False
+                    defined_direction_vertical = True
+                if imgui.radio_button("Both", not defined_direction_horizontal and not defined_direction_vertical):
+                    defined_direction_horizontal = False
+                    defined_direction_vertical = False
+
             elif current_edge_detection_method == 2:  # Mask Methods
                 mask_size_changed, mask_size = imgui.slider_int("Mask Size", mask_size, 2, 5)
                 if mask_size_changed:
@@ -376,16 +446,20 @@ def main():
                             imgui.same_line()
                 imgui.pop_item_width()
                 imgui.pop_style_var()
+
             elif current_edge_detection_method == 3:  # Laplacian Operator
                 imgui.text("Laplacian Kernel Type:")
                 if imgui.radio_button("Cross", not laplacian_square):
                     laplacian_square = False
                 if imgui.radio_button("Square", laplacian_square):
                     laplacian_square = True
+
             elif current_edge_detection_method == 4:  # Line Detection
                 pass
+
             elif current_edge_detection_method == 5:  # Point Detection
                 pass
+
             elif current_edge_detection_method == 6:  # Canny Edge Detection
                 imgui.text("Canny Thresholds:")
                 old_lower = canny_lower_thresh
@@ -397,6 +471,7 @@ def main():
                     canny_upper_thresh = canny_lower_thresh + 1
                 if old_upper != canny_upper_thresh and canny_upper_thresh <= canny_lower_thresh:
                     canny_lower_thresh = canny_upper_thresh - 1
+
             elif current_edge_detection_method == 7:  # Marr-Hildreth Edge Detection
                 pass
 
