@@ -242,8 +242,15 @@ def laplacian_operator_edge_detection(img):
 
 
 def line_detection_edge_detection(img):
-    print("line_detection_edge_detection")
-    return img
+    res = np.copy(img)
+
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    lines = cv2.HoughLinesP(img, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=10)
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        cv2.line(res, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA)
+
+    return res
 
 
 def point_detection_edge_detection(img):
@@ -529,7 +536,6 @@ def main():
                     threshold_button_callback()
 
             imgui.end()
-
 
         if show_settings_window:
             imgui.set_next_window_size(400, 200, imgui.ONCE)
