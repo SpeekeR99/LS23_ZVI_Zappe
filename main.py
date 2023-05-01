@@ -12,6 +12,7 @@ WINDOW_HEIGHT = 720
 show_settings_window = False
 show_about_window = False
 show_edge_detection_window = False
+show_threshold_window = False
 show_save_as_dialog = False
 
 imgs = {}
@@ -19,6 +20,9 @@ current_img = 0
 
 edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
 current_edge_detection_method = 0
+
+otsu_threshold = False
+threshold_value = 127
 
 current_defined_direction_method = 0
 defined_direction_horizontal = True
@@ -271,8 +275,23 @@ def generate_button_callback():
                   "show": True, "original_size": (res.shape[1], res.shape[0])}
 
 
+def threshold_button_callback():
+    global imgs, threshold_value
+    img = imgs[list(imgs.keys())[current_img]]["img"]
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    if otsu_threshold:
+        threshold_value, res = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    else:
+        res = cv2.threshold(img, threshold_value, 255, cv2.THRESH_BINARY)[1]
+    res = cv2.cvtColor(res, cv2.COLOR_GRAY2RGB)
+    render_res, texture = create_render_img_and_texture(res)
+    name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (Threshold)." + list(imgs.keys())[current_img].split(".")[-1])
+    imgs[name] = {"img": res, "render_img": render_res, "texture": texture,
+                  "show": True, "original_size": (res.shape[1], res.shape[0])}
+
+
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -324,6 +343,12 @@ def main():
                 clicked_edge_detect, _ = imgui.menu_item("Edge Detection...", None, False, True)
                 if clicked_edge_detect:
                     show_edge_detection_window = True
+
+                imgui.separator()
+
+                clicked_threshold, _ = imgui.menu_item("Threshold...", None, False, True)
+                if clicked_threshold:
+                    show_threshold_window = True
 
                 imgui.end_menu()
             if imgui.begin_menu("Settings"):
@@ -482,6 +507,29 @@ def main():
                     generate_button_callback()
 
             imgui.end()
+
+        if show_threshold_window:
+            imgui.set_next_window_size(500, 500, imgui.ONCE)
+            imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 500) / 2, imgui.ONCE)
+
+            _, show_threshold_window = imgui.begin("Thresholding", True, imgui.WINDOW_NO_COLLAPSE)
+
+            my_text_separator("Image Selection")
+            _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
+
+            my_text_separator("Thresholding Settings")
+            _, otsu_threshold = imgui.checkbox("Otsu Threshold", otsu_threshold)
+            if not otsu_threshold:
+                _, threshold_value = imgui.slider_int("Threshold Value", threshold_value, 0, 255)
+
+            if imgui.button("Threshold"):
+                if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
+                    print("No image selected!")
+                else:
+                    threshold_button_callback()
+
+            imgui.end()
+
 
         if show_settings_window:
             imgui.set_next_window_size(400, 200, imgui.ONCE)
