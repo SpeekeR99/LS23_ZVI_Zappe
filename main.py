@@ -19,6 +19,10 @@ current_img = 0
 
 edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
 current_edge_detection_method = 0
+
+laplacian_cross = False
+laplacian_square = True
+
 canny_lower_thresh = 100
 canny_upper_thresh = 200
 
@@ -141,8 +145,19 @@ def mask_methods_edge_detection(img):
 
 
 def laplacian_operator_edge_detection(img):
-    print("laplacian_operator_edge_detection")
-    return img
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    kernel = np.ones((3, 3))
+    if laplacian_square:
+        kernel[1, 1] = -8
+    else:
+        kernel[0, 0] = 0
+        kernel[0, 2] = 0
+        kernel[2, 0] = 0
+        kernel[2, 2] = 0
+        kernel[1, 1] = -4
+    kernel = -1 * kernel
+    res = cv2.filter2D(img, -1, kernel)
+    return res
 
 
 def line_detection_edge_detection(img):
@@ -180,7 +195,7 @@ def generate_button_callback():
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, laplacian_kernel_size, laplacian_cross, laplacian_square, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -298,7 +313,25 @@ def main():
             my_text_separator("Edge Detection Method")
             _, current_edge_detection_method = imgui.combo("Edge Detection Method", current_edge_detection_method, edge_detection_methods)
 
-            if current_edge_detection_method == 6:
+            if current_edge_detection_method == 0:  # Defined Direction
+                pass
+            elif current_edge_detection_method == 1:  # Gradient Magnitude
+                pass
+            elif current_edge_detection_method == 2:  # Mask Methods
+                pass
+            elif current_edge_detection_method == 3:  # Laplacian Operator
+                imgui.text("Laplacian Kernel Type:")
+                if imgui.radio_button("Cross", laplacian_cross):
+                    laplacian_cross = True
+                    laplacian_square = False
+                if imgui.radio_button("Square", laplacian_square):
+                    laplacian_cross = False
+                    laplacian_square = True
+            elif current_edge_detection_method == 4:  # Line Detection
+                pass
+            elif current_edge_detection_method == 5:  # Point Detection
+                pass
+            elif current_edge_detection_method == 6:  # Canny Edge Detection
                 imgui.text("Canny Thresholds:")
                 old_lower = canny_lower_thresh
                 old_upper = canny_upper_thresh
@@ -309,6 +342,8 @@ def main():
                     canny_upper_thresh = canny_lower_thresh + 1
                 if old_upper != canny_upper_thresh and canny_upper_thresh <= canny_lower_thresh:
                     canny_lower_thresh = canny_upper_thresh - 1
+            elif current_edge_detection_method == 7:  # Marr-Hildreth Edge Detection
+                pass
 
             if imgui.button("Generate"):
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
