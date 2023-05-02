@@ -278,7 +278,7 @@ def point_detection_edge_detection(img):
 def canny_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    gauss = cv2.GaussianBlur(img, (9, 9), 0)
+    gauss = cv2.GaussianBlur(img, (9, 9), 2)
 
     kernel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
     kernel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
@@ -290,8 +290,8 @@ def canny_edge_detection(img):
     theta += np.pi * np.int32(theta < 0)
     non_max_suppression = np.copy(gradient)
 
-    for i in range(1, img.shape[0] - 1):
-        for j in range(1, img.shape[1] - 1):
+    for j in range(1, gradient.shape[0] - 1):
+        for i in range(1, gradient.shape[1] - 1):
             if (0 <= theta[j, i] < 22.5 / 180 * np.pi) or (157.5 / 180 * np.pi <= theta[j, i] < np.pi):
                 if gradient[j, i] < gradient[j, i - 1] or gradient[j, i] < gradient[j, i + 1]:
                     non_max_suppression[j, i] = 0
@@ -332,7 +332,7 @@ def canny_edge_detection(img):
 
 
 def marr_hildreth_edge_detection(img):
-    print("marr_hildreth_edge_detection")
+
     return img
 
 
