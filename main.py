@@ -12,6 +12,7 @@ WINDOW_HEIGHT = 720
 show_settings_window = False
 show_about_window = False
 show_edge_detection_window = False
+show_blur_window = False
 show_threshold_window = False
 show_save_as_dialog = False
 
@@ -20,7 +21,7 @@ current_img = 0
 
 edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
 current_edge_detection_method = 0
-
+blur_kernel_size = 3
 otsu_threshold = False
 threshold_value = 127
 
@@ -39,7 +40,7 @@ default_mask_3 = np.array([[1, 1, 1], [1, -8, 1], [1, 1, 1]])
 default_mask_5 = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, -24, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]])
 mask_methods_kernel = default_mask_3
 
-point_detection_threshold = 50
+point_detection_threshold = 240
 
 canny_lower_thresh = 100
 canny_upper_thresh = 200
@@ -151,6 +152,7 @@ def defined_direction_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     horizontal_kernel = np.ones((3, 3))
     vertical_kernel = np.ones((3, 3))
+
     if current_defined_direction_method == 0:  # Sobel
         horizontal_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
         vertical_kernel = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
@@ -160,18 +162,21 @@ def defined_direction_edge_detection(img):
     elif current_defined_direction_method == 2:  # Roberts
         horizontal_kernel = np.array([[1, 0], [0, -1]])
         vertical_kernel = np.array([[0, 1], [-1, 0]])
+
     if defined_direction_horizontal:
         res = cv2.filter2D(img, -1, horizontal_kernel)
     elif defined_direction_vertical:
         res = cv2.filter2D(img, -1, vertical_kernel)
     else:
         res = cv2.filter2D(img, -1, horizontal_kernel) + cv2.filter2D(img, -1, vertical_kernel)
+
     return res
 
 
 def gradient_magnitude_direction_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     img = np.float32(img)
+
     forward_difference_x = np.zeros(img.shape, dtype=np.float32)
     for i in range(img.shape[0]):
         for j in range(img.shape[1] - 1):
@@ -230,6 +235,7 @@ def mask_methods_edge_detection(img):
 def laplacian_operator_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     kernel = np.ones((3, 3))
+
     if laplacian_square:
         kernel[1, 1] = -8
     else:
@@ -239,6 +245,7 @@ def laplacian_operator_edge_detection(img):
         kernel[2, 2] = 0
         kernel[1, 1] = -4
     kernel = -1 * kernel
+
     res = cv2.filter2D(img, -1, kernel)
     return res
 
@@ -292,6 +299,17 @@ def generate_button_callback():
                   "show": True, "original_size": (res.shape[1], res.shape[0])}
 
 
+def blur_button_callback():
+    global imgs, threshold_value
+    img = imgs[list(imgs.keys())[current_img]]["img"]
+    res = cv2.GaussianBlur(img, (blur_kernel_size, blur_kernel_size), 0)
+    render_res, texture = create_render_img_and_texture(res)
+    name = avoid_name_duplicates(
+        list(imgs.keys())[current_img].split(".")[0] + " (Blurred)." + list(imgs.keys())[current_img].split(".")[-1])
+    imgs[name] = {"img": res, "render_img": render_res, "texture": texture,
+                  "show": True, "original_size": (res.shape[1], res.shape[0])}
+
+
 def threshold_button_callback():
     global imgs, threshold_value
     img = imgs[list(imgs.keys())[current_img]]["img"]
@@ -308,7 +326,7 @@ def threshold_button_callback():
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_blur_window, blur_kernel_size, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_lower_thresh, canny_upper_thresh
 
     app = wx.App()
     app.MainLoop()
@@ -362,6 +380,10 @@ def main():
                     show_edge_detection_window = True
 
                 imgui.separator()
+
+                clicked_blur, _ = imgui.menu_item("Blur...", None, False, True)
+                if clicked_blur:
+                    show_blur_window = True
 
                 clicked_threshold, _ = imgui.menu_item("Threshold...", None, False, True)
                 if clicked_threshold:
@@ -522,6 +544,27 @@ def main():
                     print("No image selected!")
                 else:
                     generate_button_callback()
+
+            imgui.end()
+
+        if show_blur_window:
+            imgui.set_next_window_size(500, 500, imgui.ONCE)
+            imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 500) / 2, imgui.ONCE)
+
+            _, show_blur_window = imgui.begin("Blurring", True, imgui.WINDOW_NO_COLLAPSE)
+
+            my_text_separator("Image Selection")
+            _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
+
+            my_text_separator("Blurring Settings")
+            changed, blur_kernel_size = imgui.slider_int("Kernel Size", blur_kernel_size, 3, 51)
+            if changed and blur_kernel_size % 2 == 0:
+                blur_kernel_size += 1
+            if imgui.button("Blur"):
+                if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
+                    print("No image selected!")
+                else:
+                    blur_button_callback()
 
             imgui.end()
 
