@@ -278,7 +278,7 @@ def point_detection_edge_detection(img):
 def canny_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    gauss = cv2.GaussianBlur(img, (5, 5), 0)
+    gauss = cv2.GaussianBlur(img, (9, 9), 0)
 
     kernel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
     kernel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
@@ -292,17 +292,16 @@ def canny_edge_detection(img):
 
     for i in range(1, img.shape[0] - 1):
         for j in range(1, img.shape[1] - 1):
-            if (theta[j, i] >= 0 and theta[j, i] < 22.5 / 180 * np.pi) or (
-                    theta[j, i] >= 157.5 / 180 * np.pi and theta[j, i] < np.pi):
+            if (0 <= theta[j, i] < 22.5 / 180 * np.pi) or (157.5 / 180 * np.pi <= theta[j, i] < np.pi):
                 if gradient[j, i] < gradient[j, i - 1] or gradient[j, i] < gradient[j, i + 1]:
                     non_max_suppression[j, i] = 0
-            elif theta[j, i] >= 22.5 / 180 * np.pi and theta[j, i] < 67.5 / 180 * np.pi:
+            elif 22.5 / 180 * np.pi <= theta[j, i] < 67.5 / 180 * np.pi:
                 if gradient[j, i] < gradient[j - 1, i - 1] or gradient[j, i] < gradient[j + 1, i + 1]:
                     non_max_suppression[j, i] = 0
-            elif theta[j, i] >= 67.5 / 180 * np.pi and theta[j, i] < 112.5 / 180 * np.pi:
+            elif 67.5 / 180 * np.pi <= theta[j, i] < 112.5 / 180 * np.pi:
                 if gradient[j, i] < gradient[j - 1, i] or gradient[j, i] < gradient[j + 1, i]:
                     non_max_suppression[j, i] = 0
-            elif theta[j, i] >= 112.5 / 180 * np.pi and theta[j, i] < 157.5 / 180 * np.pi:
+            elif 112.5 / 180 * np.pi <= theta[j, i] < 157.5 / 180 * np.pi:
                 if gradient[j, i] < gradient[j + 1, i - 1] or gradient[j, i] < gradient[j - 1, i + 1]:
                     non_max_suppression[j, i] = 0
 
@@ -312,6 +311,22 @@ def canny_edge_detection(img):
     res[(res < canny_upper_thresh) * (res >= canny_lower_thresh)] = canny_lower_thresh
     res[res >= canny_upper_thresh] = 255
     res[res < canny_lower_thresh] = 0
+
+    xx, yy = np.where(res == 255)
+    xx = xx.tolist()
+    yy = yy.tolist()
+    while len(xx) > 0:
+        x = xx.pop()
+        y = yy.pop()
+        if x + 1 < res.shape[0] and x - 1 >= 0 and y + 1 < res.shape[1] and y - 1 >= 0:
+            newx, newy = np.where(res[x - 1:x + 2, y - 1:y + 2] == canny_lower_thresh)
+            newx = newx + x - 1
+            newy = newy + y - 1
+            if len(newx) > 0:
+                res[newx, newy] = 255
+                xx = newx.tolist() + xx
+                yy = newy.tolist() + yy
+    res[res == canny_lower_thresh] = 0
 
     return res
 
