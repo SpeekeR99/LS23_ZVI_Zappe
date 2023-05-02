@@ -42,8 +42,11 @@ mask_methods_kernel = default_mask_3
 
 point_detection_threshold = 240
 
-canny_lower_thresh = 100
-canny_upper_thresh = 200
+canny_sigma = 2
+canny_lower_thresh = 20
+canny_upper_thresh = 50
+
+marr_hildreth_sigma = 2
 
 
 def impl_glfw_init():
@@ -278,15 +281,31 @@ def point_detection_edge_detection(img):
 def canny_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    gauss = cv2.GaussianBlur(img, (9, 9), 2)
+    size = int(2 * (np.ceil(3 * canny_sigma)) + 1)
+    x, y = np.meshgrid(np.arange(-size / 2 + 1, size / 2 + 1),
+                       np.arange(-size / 2 + 1, size / 2 + 1))
+    normal = 1 / (2.0 * np.pi * canny_sigma ** 2)
+    kernel = np.exp(-(x ** 2 + y ** 2) / (2.0 * canny_sigma ** 2)) / normal
+    kern_size, gauss = kernel.shape[0], np.zeros_like(img, dtype=float)
 
-    kernel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
-    kernel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
-    sobel_x = cv2.filter2D(gauss, -1, kernel_x)
-    sobel_y = cv2.filter2D(gauss, -1, kernel_y)
+    for i in range(img.shape[0] - (kern_size - 1)):
+        for j in range(img.shape[1] - (kern_size - 1)):
+            window = img[i:i + kern_size, j:j + kern_size] * kernel
+            gauss[i, j] = np.sum(window)
 
-    gradient = np.sqrt(sobel_x ** 2 + sobel_y ** 2)
-    theta = np.arctan2(sobel_y, sobel_x)
+    kernel, kern_size = np.array(
+        [[-1, -1, -1], [0, 0, 0], [1, 1, 1]]), 3
+    gx, gy = np.zeros_like(
+        gauss, dtype=float), np.zeros_like(gauss, dtype=float)
+
+    for i in range(gauss.shape[0] - (kern_size - 1)):
+        for j in range(gauss.shape[1] - (kern_size - 1)):
+            window = gauss[i:i + kern_size, j:j + kern_size]
+            gx[i, j], gy[i, j] = np.sum(
+                window * kernel.T), np.sum(window * kernel)
+
+    gradient = np.sqrt(gx ** 2 + gy ** 2)
+    theta = np.arctan2(gy, gx)
     theta += np.pi * np.int32(theta < 0)
     non_max_suppression = np.copy(gradient)
 
@@ -306,34 +325,50 @@ def canny_edge_detection(img):
                     non_max_suppression[j, i] = 0
 
     non_max_suppression = non_max_suppression / np.max(non_max_suppression) * 255
-    res = non_max_suppression.astype(np.uint8)
+    weak, strong = np.copy(non_max_suppression), np.copy(non_max_suppression)
+    weak[weak < canny_lower_thresh] = 0
+    weak[weak >= canny_upper_thresh] = 0
+    weak[weak != 0] = 255
+    strong[strong < canny_upper_thresh] = 0
+    strong[strong >= canny_upper_thresh] = 255
 
-    res[(res < canny_upper_thresh) * (res >= canny_lower_thresh)] = canny_lower_thresh
-    res[res >= canny_upper_thresh] = 255
-    res[res < canny_lower_thresh] = 0
-
-    xx, yy = np.where(res == 255)
-    xx = xx.tolist()
-    yy = yy.tolist()
-    while len(xx) > 0:
-        x = xx.pop()
-        y = yy.pop()
-        if x + 1 < res.shape[0] and x - 1 >= 0 and y + 1 < res.shape[1] and y - 1 >= 0:
-            newx, newy = np.where(res[x - 1:x + 2, y - 1:y + 2] == canny_lower_thresh)
-            newx = newx + x - 1
-            newy = newy + y - 1
-            if len(newx) > 0:
-                res[newx, newy] = 255
-                xx = newx.tolist() + xx
-                yy = newy.tolist() + yy
-    res[res == canny_lower_thresh] = 0
+    res = weak + strong
+    res = res.astype(np.uint8)
 
     return res
 
 
 def marr_hildreth_edge_detection(img):
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    return img
+    size = int(2 * (np.ceil(3 * marr_hildreth_sigma)) + 1)
+    x, y = np.meshgrid(np.arange(-size / 2 + 1, size / 2 + 1),
+                       np.arange(-size / 2 + 1, size / 2 + 1))
+    normal = 1 / (2.0 * np.pi * marr_hildreth_sigma ** 2)
+    kernel = ((x ** 2 + y ** 2 - (2.0 * marr_hildreth_sigma ** 2)) / marr_hildreth_sigma ** 4) * np.exp(-(x ** 2 + y ** 2) / (2.0 * marr_hildreth_sigma ** 2)) / normal
+    kern_size = kernel.shape[0]
+    log = np.zeros_like(img, dtype=float)
+
+    for i in range(img.shape[0] - (kern_size - 1)):
+        for j in range(img.shape[1] - (kern_size - 1)):
+            window = img[i:i + kern_size, j:j + kern_size] * kernel
+            log[i, j] = np.sum(window)
+
+    log = log.astype(np.int64, copy=False)
+    zero_crossing = np.zeros_like(log)
+
+    for i in range(log.shape[0] - (kern_size - 1)):
+        for j in range(log.shape[1] - (kern_size - 1)):
+            if log[i][j] == 0:
+                if (log[i][j - 1] < 0 and log[i][j + 1] > 0) or (log[i][j - 1] < 0 and log[i][j + 1] < 0) or (
+                        log[i - 1][j] < 0 and log[i + 1][j] > 0) or (log[i - 1][j] > 0 and log[i + 1][j] < 0):
+                    zero_crossing[i][j] = 255
+            if log[i][j] < 0:
+                if (log[i][j - 1] > 0) or (log[i][j + 1] > 0) or (log[i - 1][j] > 0) or (log[i + 1][j] > 0):
+                    zero_crossing[i][j] = 255
+
+    zero_crossing = zero_crossing.astype(np.uint8)
+    return zero_crossing
 
 
 def generate_button_callback():
@@ -376,7 +411,7 @@ def threshold_button_callback():
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_blur_window, blur_kernel_size, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_lower_thresh, canny_upper_thresh
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_blur_window, blur_kernel_size, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_sigma, canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma
 
     app = wx.App()
     app.MainLoop()
@@ -575,6 +610,7 @@ def main():
                 _, point_detection_threshold = imgui.slider_int("Threshold", point_detection_threshold, 0, 255)
 
             elif current_edge_detection_method == 6:  # Canny Edge Detection
+                _, canny_sigma = imgui.slider_float("Sigma", canny_sigma, 0.1, 10.0, "%.1f")
                 imgui.text("Canny Thresholds:")
                 old_lower = canny_lower_thresh
                 old_upper = canny_upper_thresh
@@ -587,7 +623,7 @@ def main():
                     canny_lower_thresh = canny_upper_thresh - 1
 
             elif current_edge_detection_method == 7:  # Marr-Hildreth Edge Detection
-                pass
+                _, marr_hildreth_sigma = imgui.slider_float("Sigma", marr_hildreth_sigma, 0.1, 10.0, "%.1f")
 
             if imgui.button("Generate"):
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
