@@ -153,6 +153,7 @@ def my_text_separator(text):
 
 def defined_direction_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    img = img.astype(np.float32)
     horizontal_kernel_1 = np.ones((3, 3))
     horizontal_kernel_2 = np.ones((3, 3))
     vertical_kernel_1 = np.ones((3, 3))
@@ -174,13 +175,19 @@ def defined_direction_edge_detection(img):
         vertical_kernel_1 = np.array([[0, 1], [-1, 0]])
         vertical_kernel_2 = np.array([[1, 0], [0, -1]])
 
-    if defined_direction_horizontal:
-        res = cv2.filter2D(img, -1, horizontal_kernel_1) + cv2.filter2D(img, -1, horizontal_kernel_2)
-    elif defined_direction_vertical:
-        res = cv2.filter2D(img, -1, vertical_kernel_1) + cv2.filter2D(img, -1, vertical_kernel_2)
-    else:
-        res = cv2.filter2D(img, -1, horizontal_kernel_1) + cv2.filter2D(img, -1, horizontal_kernel_2) + cv2.filter2D(img, -1, vertical_kernel_1) + cv2.filter2D(img, -1, vertical_kernel_2)
+    horizontal_1 = cv2.filter2D(img, -1, horizontal_kernel_1)
+    horizontal_2 = cv2.filter2D(img, -1, horizontal_kernel_2)
+    vertical_1 = cv2.filter2D(img, -1, vertical_kernel_1)
+    vertical_2 = cv2.filter2D(img, -1, vertical_kernel_2)
 
+    if defined_direction_horizontal:
+        res = np.sqrt(np.power(horizontal_1, 2) + np.power(horizontal_2, 2))
+    elif defined_direction_vertical:
+        res = np.sqrt(np.power(vertical_1, 2) + np.power(vertical_2, 2))
+    else:
+        res = np.sqrt(np.power(horizontal_1, 2) + np.power(horizontal_2, 2) + np.power(vertical_1, 2) + np.power(vertical_2, 2))
+
+    res = res / np.max(res) * 255
     res = res.astype(np.uint8)
     return res
 
