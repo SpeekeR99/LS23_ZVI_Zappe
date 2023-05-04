@@ -19,7 +19,9 @@ show_save_as_dialog = False
 imgs = {}
 current_img = 0
 
-edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection", "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection", "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
+edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection",
+                          "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection",
+                          "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
 current_edge_detection_method = 0
 blur_kernel_size = 3
 otsu_threshold = False
@@ -91,15 +93,18 @@ def texture_image(img):
 
 def show_image(name):
     global imgs
-    imgui.set_next_window_size(imgs[name]["render_img"].shape[1] + 15, imgs[name]["render_img"].shape[0] + 35, imgui.ONCE)
+    imgui.set_next_window_size(imgs[name]["render_img"].shape[1] + 15, imgs[name]["render_img"].shape[0] + 35,
+                               imgui.ONCE)
     _, close_bool = imgui.begin(name, True, imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_COLLAPSE)
     window_size = imgui.get_window_size()
     dx = window_size[0] - 15 - imgs[name]["original_size"][0]
     dy = window_size[1] - 35 - imgs[name]["original_size"][1]
-    scale = min((imgs[name]["original_size"][0] + dx) / (imgs[name]["original_size"][0]), (imgs[name]["original_size"][1] + dy) / (imgs[name]["original_size"][1]))
+    scale = min((imgs[name]["original_size"][0] + dx) / (imgs[name]["original_size"][0]),
+                (imgs[name]["original_size"][1] + dy) / (imgs[name]["original_size"][1]))
     scale = max(scale, 0.01)
     if dx or dy:
-        imgs[name]["render_img"] = cv2.resize(imgs[name]["render_img"], (int(imgs[name]["original_size"][0] * scale), int(imgs[name]["original_size"][1] * scale)))
+        imgs[name]["render_img"] = cv2.resize(imgs[name]["render_img"], (
+            int(imgs[name]["original_size"][0] * scale), int(imgs[name]["original_size"][1] * scale)))
     imgui.image(imgs[name]["texture"], imgs[name]["render_img"].shape[1], imgs[name]["render_img"].shape[0])
     imgui.end()
     return close_bool
@@ -142,7 +147,8 @@ def load_image(filepath):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     render_img, texture = create_render_img_and_texture(img)
     name = avoid_name_duplicates(filepath)
-    imgs[name] = {"img": img, "render_img": render_img, "texture": texture, "show": True, "original_size": (img.shape[1], img.shape[0])}
+    imgs[name] = {"img": img, "render_img": render_img, "texture": texture, "show": True,
+                  "original_size": (img.shape[1], img.shape[0])}
 
 
 def my_text_separator(text):
@@ -185,7 +191,8 @@ def defined_direction_edge_detection(img):
     elif defined_direction_vertical:
         res = np.sqrt(np.power(vertical_1, 2) + np.power(vertical_2, 2))
     else:
-        res = np.sqrt(np.power(horizontal_1, 2) + np.power(horizontal_2, 2) + np.power(vertical_1, 2) + np.power(vertical_2, 2))
+        res = np.sqrt(
+            np.power(horizontal_1, 2) + np.power(horizontal_2, 2) + np.power(vertical_1, 2) + np.power(vertical_2, 2))
 
     res = res / np.max(res) * 255
     res = res.astype(np.uint8)
@@ -248,6 +255,8 @@ def gradient_magnitude_direction_edge_detection(img):
 def mask_methods_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     res = cv2.filter2D(img, -1, mask_methods_kernel)
+    res = res / np.max(res) * 255
+    res = res.astype(np.uint8)
     return res
 
 
@@ -285,7 +294,7 @@ def line_detection_edge_detection(img):
 def point_detection_edge_detection(img):
     res = np.copy(img)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    mask = np.array([[-1/8, -1/8, -1/8], [-1/8, 1, -1/8], [-1/8, -1/8, -1/8]])
+    mask = np.array([[-1 / 8, -1 / 8, -1 / 8], [-1 / 8, 1, -1 / 8], [-1 / 8, -1 / 8, -1 / 8]])
 
     for i in range(1, img.shape[0] - 1):
         for j in range(1, img.shape[1] - 1):
@@ -362,7 +371,8 @@ def marr_hildreth_edge_detection(img):
     x, y = np.meshgrid(np.arange(-size / 2 + 1, size / 2 + 1),
                        np.arange(-size / 2 + 1, size / 2 + 1))
     normal = 1 / (2.0 * np.pi * marr_hildreth_sigma ** 2)
-    kernel = ((x ** 2 + y ** 2 - (2.0 * marr_hildreth_sigma ** 2)) / marr_hildreth_sigma ** 4) * np.exp(-(x ** 2 + y ** 2) / (2.0 * marr_hildreth_sigma ** 2)) / normal
+    kernel = ((x ** 2 + y ** 2 - (2.0 * marr_hildreth_sigma ** 2)) / marr_hildreth_sigma ** 4) * np.exp(
+        -(x ** 2 + y ** 2) / (2.0 * marr_hildreth_sigma ** 2)) / normal
     kern_size = kernel.shape[0]
     log = np.zeros_like(img, dtype=float)
 
@@ -390,13 +400,16 @@ def marr_hildreth_edge_detection(img):
 
 def generate_button_callback():
     global imgs
-    edge_detection = [defined_direction_edge_detection, gradient_magnitude_direction_edge_detection, mask_methods_edge_detection, laplacian_operator_edge_detection, line_detection_edge_detection, point_detection_edge_detection, canny_edge_detection, marr_hildreth_edge_detection]
+    edge_detection = [defined_direction_edge_detection, gradient_magnitude_direction_edge_detection,
+                      mask_methods_edge_detection, laplacian_operator_edge_detection, line_detection_edge_detection,
+                      point_detection_edge_detection, canny_edge_detection, marr_hildreth_edge_detection]
     img = imgs[list(imgs.keys())[current_img]]["img"]
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     res = edge_detection[current_edge_detection_method](img)
     res = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
     render_res, texture = create_render_img_and_texture(res)
-    name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (" + edge_detection_methods[current_edge_detection_method] + ")." + list(imgs.keys())[current_img].split(".")[-1])
+    name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (" + edge_detection_methods[
+        current_edge_detection_method] + ")." + list(imgs.keys())[current_img].split(".")[-1])
     imgs[name] = {"img": res, "render_img": render_res, "texture": texture,
                   "show": True, "original_size": (res.shape[1], res.shape[0])}
 
@@ -422,13 +435,19 @@ def threshold_button_callback():
         res = cv2.threshold(img, threshold_value, 255, cv2.THRESH_BINARY)[1]
     res = cv2.cvtColor(res, cv2.COLOR_GRAY2RGB)
     render_res, texture = create_render_img_and_texture(res)
-    name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (Threshold)." + list(imgs.keys())[current_img].split(".")[-1])
+    name = avoid_name_duplicates(
+        list(imgs.keys())[current_img].split(".")[0] + " (Threshold)." + list(imgs.keys())[current_img].split(".")[-1])
     imgs[name] = {"img": res, "render_img": render_res, "texture": texture,
                   "show": True, "original_size": (res.shape[1], res.shape[0])}
 
 
 def main():
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, show_blur_window, blur_kernel_size, show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, threshold_value, laplacian_kernel_size, laplacian_square, current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_sigma, canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, \
+        show_blur_window, blur_kernel_size, show_threshold_window, show_save_as_dialog, imgs, current_img, \
+        current_edge_detection_method, otsu_threshold, threshold_value, laplacian_square, \
+        current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, \
+        mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_sigma, \
+        canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma
 
     app = wx.App()
     app.MainLoop()
@@ -452,7 +471,11 @@ def main():
             if imgui.begin_menu("File"):
                 clicked_new, _ = imgui.menu_item("New Blank Project", None, False, True)
                 if clicked_new:
-                    sure = wx.MessageDialog(None, "Are you sure you want to create a new project? All unsaved changes will be lost!", "New Project", wx.YES_NO | wx.ICON_QUESTION).ShowModal()
+                    sure = wx.MessageDialog(
+                        None,
+                        "Are you sure you want to create a new project? All unsaved changes will be lost!",
+                        "New Project", wx.YES_NO | wx.ICON_QUESTION
+                    ).ShowModal()
                     if sure == wx.ID_YES:
                         imgs = {}
                         show_edge_detection_window = False
@@ -461,7 +484,10 @@ def main():
 
                 clicked_load, _ = imgui.menu_item("Load Image...", None, False, True)
                 if clicked_load:
-                    filepath = wx.FileSelector("Load Image", wildcard="Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp")
+                    filepath = wx.FileSelector(
+                        "Load Image",
+                        wildcard="Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp"
+                    )
                     if filepath:
                         load_image(filepath)
 
@@ -517,7 +543,11 @@ def main():
             if imgs[name]["show"]:
                 imgs[name]["show"] = show_image(name)
                 if not imgs[name]["show"]:
-                    sure = wx.MessageDialog(None, "Are you sure you want to delete " + name + "? All unsaved changes will be lost!", "Delete Image", wx.YES_NO | wx.ICON_QUESTION).ShowModal()
+                    sure = wx.MessageDialog(
+                        None,
+                        "Are you sure you want to delete " + name + "? All unsaved changes will be lost!",
+                        "Delete Image", wx.YES_NO | wx.ICON_QUESTION
+                    ).ShowModal()
                     if sure == wx.ID_YES:
                         to_be_deleted = name
                     else:
@@ -536,7 +566,11 @@ def main():
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
                     print("No image selected!")
                 else:
-                    filepath = wx.FileSelector("Save Image as...", default_filename=list(imgs.keys())[current_img], wildcard="Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp", flags=wx.FD_SAVE)
+                    filepath = wx.FileSelector(
+                        "Save Image as...", default_filename=list(imgs.keys())[current_img],
+                        wildcard="Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp",
+                        flags=wx.FD_SAVE
+                    )
                     if filepath:
                         img = imgs[list(imgs.keys())[current_img]]["img"]
                         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -554,10 +588,12 @@ def main():
             _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
 
             my_text_separator("Edge Detection Method")
-            _, current_edge_detection_method = imgui.combo("Edge Detection Method", current_edge_detection_method, edge_detection_methods)
+            _, current_edge_detection_method = imgui.combo("Edge Detection Method", current_edge_detection_method,
+                                                           edge_detection_methods)
 
             if current_edge_detection_method == 0:  # Defined Direction
-                _, current_defined_direction_method = imgui.combo("Method", current_defined_direction_method, ["Sobel", "Prewitt", "Roberts"])
+                _, current_defined_direction_method = imgui.combo("Method", current_defined_direction_method,
+                                                                  ["Sobel", "Prewitt", "Roberts"])
                 imgui.text("Direction:")
                 if imgui.radio_button("Horizontal", defined_direction_horizontal):
                     defined_direction_horizontal = True
@@ -607,7 +643,8 @@ def main():
                 imgui.push_item_width(30)
                 for i in range(0, mask_size):
                     for j in range(0, mask_size):
-                        _, mask_methods_kernel[i][j] = imgui.input_int("##" + str(i) + str(j), mask_methods_kernel[i][j], 0, 0)
+                        _, mask_methods_kernel[i][j] = imgui.input_int("##" + str(i) + str(j),
+                                                                       mask_methods_kernel[i][j], 0, 0)
                         if j != mask_size - 1:
                             imgui.same_line()
                 imgui.pop_item_width()
@@ -740,7 +777,11 @@ def main():
             imgui.set_next_window_size(300, 100, imgui.ALWAYS)
             imgui.set_next_window_position(int((WINDOW_WIDTH - 300) / 2), int((WINDOW_HEIGHT - 100) / 2), imgui.ALWAYS)
 
-            _, show_about_window = imgui.begin("About", True, imgui.WINDOW_ALWAYS_AUTO_RESIZE | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_NAV | imgui.WINDOW_NO_COLLAPSE)
+            _, show_about_window = imgui.begin(
+                "About", True,
+                imgui.WINDOW_ALWAYS_AUTO_RESIZE | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_NAV |
+                imgui.WINDOW_NO_COLLAPSE
+            )
             imgui.text("This application was made by:\nDominik Zappe")
 
             imgui.end()
