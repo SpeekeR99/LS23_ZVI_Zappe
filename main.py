@@ -153,26 +153,35 @@ def my_text_separator(text):
 
 def defined_direction_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    horizontal_kernel = np.ones((3, 3))
-    vertical_kernel = np.ones((3, 3))
+    horizontal_kernel_1 = np.ones((3, 3))
+    horizontal_kernel_2 = np.ones((3, 3))
+    vertical_kernel_1 = np.ones((3, 3))
+    vertical_kernel_2 = np.ones((3, 3))
 
     if current_defined_direction_method == 0:  # Sobel
-        horizontal_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
-        vertical_kernel = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+        horizontal_kernel_1 = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+        horizontal_kernel_2 = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+        vertical_kernel_1 = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+        vertical_kernel_2 = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
     elif current_defined_direction_method == 1:  # Prewitt
-        horizontal_kernel = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
-        vertical_kernel = np.array([[-1, -1, -1], [0, 0, 0], [1, 1, 1]])
+        horizontal_kernel_1 = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
+        horizontal_kernel_2 = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
+        vertical_kernel_1 = np.array([[-1, -1, -1], [0, 0, 0], [1, 1, 1]])
+        vertical_kernel_2 = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
     elif current_defined_direction_method == 2:  # Roberts
-        horizontal_kernel = np.array([[1, 0], [0, -1]])
-        vertical_kernel = np.array([[0, 1], [-1, 0]])
+        horizontal_kernel_1 = np.array([[1, 0], [0, -1]])
+        horizontal_kernel_2 = np.array([[0, 1], [-1, 0]])
+        vertical_kernel_1 = np.array([[0, 1], [-1, 0]])
+        vertical_kernel_2 = np.array([[1, 0], [0, -1]])
 
     if defined_direction_horizontal:
-        res = cv2.filter2D(img, -1, horizontal_kernel)
+        res = cv2.filter2D(img, -1, horizontal_kernel_1) + cv2.filter2D(img, -1, horizontal_kernel_2)
     elif defined_direction_vertical:
-        res = cv2.filter2D(img, -1, vertical_kernel)
+        res = cv2.filter2D(img, -1, vertical_kernel_1) + cv2.filter2D(img, -1, vertical_kernel_2)
     else:
-        res = cv2.filter2D(img, -1, horizontal_kernel) + cv2.filter2D(img, -1, vertical_kernel)
+        res = cv2.filter2D(img, -1, horizontal_kernel_1) + cv2.filter2D(img, -1, horizontal_kernel_2) + cv2.filter2D(img, -1, vertical_kernel_1) + cv2.filter2D(img, -1, vertical_kernel_2)
 
+    res = res.astype(np.uint8)
     return res
 
 
@@ -258,9 +267,10 @@ def line_detection_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     lines = cv2.HoughLinesP(img, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=10)
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        cv2.line(res, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA)
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(res, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA)
 
     return res
 
