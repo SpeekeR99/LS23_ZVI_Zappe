@@ -21,7 +21,7 @@ current_img = 0
 
 edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection",
                           "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection",
-                          "Canny Edge Detection", "Marr-Hildreth Edge Detection"]
+                          "Canny Edge Detection", "Canny Edge Detection (OpenCV)", "Marr-Hildreth Edge Detection"]
 current_edge_detection_method = 0
 blur_kernel_size = 3
 otsu_threshold = False
@@ -364,6 +364,10 @@ def canny_edge_detection(img):
     return res
 
 
+def canny_edge_detection_opencv(img):
+    return cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
+
+
 def marr_hildreth_edge_detection(img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -402,7 +406,7 @@ def generate_button_callback():
     global imgs
     edge_detection = [defined_direction_edge_detection, gradient_magnitude_direction_edge_detection,
                       mask_methods_edge_detection, laplacian_operator_edge_detection, line_detection_edge_detection,
-                      point_detection_edge_detection, canny_edge_detection, marr_hildreth_edge_detection]
+                      point_detection_edge_detection, canny_edge_detection, canny_edge_detection_opencv, marr_hildreth_edge_detection]
     img = imgs[list(imgs.keys())[current_img]]["img"]
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     res = edge_detection[current_edge_detection_method](img)
@@ -676,7 +680,19 @@ def main():
                 if old_upper != canny_upper_thresh and canny_upper_thresh <= canny_lower_thresh:
                     canny_lower_thresh = canny_upper_thresh - 1
 
-            elif current_edge_detection_method == 7:  # Marr-Hildreth Edge Detection
+            elif current_edge_detection_method == 7:  # Canny Edge Detection (OpenCV)
+                imgui.text("Canny Thresholds:")
+                old_lower = canny_lower_thresh
+                old_upper = canny_upper_thresh
+                _, canny_lower_thresh = imgui.slider_int("Lower Threshold", canny_lower_thresh, 0, 254)
+                _, canny_upper_thresh = imgui.slider_int("Upper Threshold", canny_upper_thresh, 1, 255)
+
+                if old_lower != canny_lower_thresh and canny_lower_thresh >= canny_upper_thresh:
+                    canny_upper_thresh = canny_lower_thresh + 1
+                if old_upper != canny_upper_thresh and canny_upper_thresh <= canny_lower_thresh:
+                    canny_lower_thresh = canny_upper_thresh - 1
+
+            elif current_edge_detection_method == 8:  # Marr-Hildreth Edge Detection
                 _, marr_hildreth_sigma = imgui.slider_float("Sigma", marr_hildreth_sigma, 0.1, 10.0, "%.1f")
 
             if imgui.button("Generate"):
