@@ -6,52 +6,87 @@ import imgui
 from imgui.integrations.glfw import GlfwRenderer
 import wx
 
+#  Window width
 WINDOW_WIDTH = 1280
+#  Window height
 WINDOW_HEIGHT = 720
 
+#  Whether to show the settings window
 show_settings_window = False
+#  Whether to show the about window
 show_about_window = False
+#  Whether to show the edge detection window
 show_edge_detection_window = False
+#  Whether to show the blur window
 show_blur_window = False
+#  Whether to show the threshold window
 show_threshold_window = False
+#  Whether to show the save as dialog window
 show_save_as_dialog = False
 
+#  Loaded images
 imgs = {}
+#  Currently selected image
 current_img = 0
 
+#  Edge detection methods
 edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection",
                           "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection",
                           "Canny Edge Detection", "Canny Edge Detection (OpenCV)", "Marr-Hildreth Edge Detection"]
+#  Currently selected edge detection method
 current_edge_detection_method = 0
+#  Kernel size for Gaussian blur
 blur_kernel_size = 3
+#  Whether to use Otsu threshold
 otsu_threshold = False
+#  Current threshold value
 threshold_value = 127
 
+#  Currently selected direction method
 current_defined_direction_method = 0
+#  Whether to use horizontal direction
 defined_direction_horizontal = True
+#  Whether to use vertical direction
 defined_direction_vertical = False
 
+#  Whether to use forward difference
 forward_difference = True
+#  Whether to use backward difference
 backward_difference = False
 
+#  Whether to use laplacian square or cross
 laplacian_square = True
 
+#  Current mask size
 mask_size = 3
+#  Default mask for size 2x2
 default_mask_2 = np.array([[1, 0], [0, -1]])
+#  Default mask for size 3x3
 default_mask_3 = np.array([[1, 1, 1], [1, -8, 1], [1, 1, 1]])
+#  Default mask for size 5x5
 default_mask_5 = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, -24, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]])
+#  Currently created mask
 mask_methods_kernel = default_mask_3
 
+#  Current point detection threshold
 point_detection_threshold = 240
 
+#  Current sigma for Gaussian blur in Canny edge detection
 canny_sigma = 2
+#  Current lower threshold for Canny edge detection
 canny_lower_thresh = 20
+#  Current upper threshold for Canny edge detection
 canny_upper_thresh = 50
 
+#  Current sigma for Gaussian blur in Marr-Hildreth edge detection
 marr_hildreth_sigma = 2
 
 
 def impl_glfw_init():
+    """
+    Initialize glfw and return the window
+    :return: Window object
+    """
     window_name = "Edge Detection Semestral Work"
 
     if not glfw.init():
@@ -79,6 +114,13 @@ def impl_glfw_init():
 
 
 def texture_image(img):
+    """
+    Create texture from image
+    Texture is needed in order to show a picture that is resizable,
+    but remain the original aspect ratio and picture for the backend processing
+    :param img: Image to create texture from
+    :return: Texture ID
+    """
     texture = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, texture)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
@@ -92,6 +134,12 @@ def texture_image(img):
 
 
 def show_image(name):
+    """
+    Adds an image to the global dictionary of images
+    Creates an ImGui window for the image texture
+    :param name: Name of the image
+    :return: Boolean whether to close the window or not
+    """
     global imgs
     imgui.set_next_window_size(imgs[name]["render_img"].shape[1] + 15, imgs[name]["render_img"].shape[0] + 35,
                                imgui.ONCE)
@@ -111,6 +159,11 @@ def show_image(name):
 
 
 def create_render_img_and_texture(img):
+    """
+    Creates a render image and texture from the original image
+    :param img: Image to create render image and texture from
+    :return: Render image and texture
+    """
     render_img = np.copy(img)
     texture = texture_image(render_img)
     dx = WINDOW_WIDTH * 0.4 - render_img.shape[0]
@@ -124,6 +177,12 @@ def create_render_img_and_texture(img):
 
 
 def avoid_name_duplicates(filepath):
+    """
+    Checks if the image name already exists in the global dictionary of images
+    If it does, it adds a number to the end of the name
+    :param filepath: Filepath of the image
+    :return: Unique name of the image
+    """
     name = filepath.split("/")[-1].split(".")[0]
     extension = filepath.split("/")[-1].split(".")[-1]
     copy = 1
@@ -138,6 +197,11 @@ def avoid_name_duplicates(filepath):
 
 
 def load_image(filepath):
+    """
+    Loads an image from the given filepath
+    :param filepath: Filepath of the image
+    :return: None
+    """
     global imgs
     filepath = filepath.replace("\\", "/")
     img = cv2.imread(filepath, cv2.IMREAD_COLOR)
@@ -152,12 +216,22 @@ def load_image(filepath):
 
 
 def my_text_separator(text):
+    """
+    Creates a separator with text in the middle
+    :param text: Text to display
+    :return: None
+    """
     imgui.separator()
     imgui.text(text)
     imgui.separator()
 
 
 def defined_direction_edge_detection(img):
+    """
+    Performs edge detection on the given image using the defined direction method
+    :param img: Image to perform edge detection on
+    :return: Image with edges
+    """
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     img = img.astype(np.float32)
     horizontal_kernel_1 = np.ones((3, 3))
@@ -200,6 +274,11 @@ def defined_direction_edge_detection(img):
 
 
 def gradient_magnitude_direction_edge_detection(img):
+    """
+    Performs edge detection on the given image using the gradient magnitude and direction method
+    :param img: Image to perform edge detection on
+    :return: Image with edges
+    """
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     img = np.float32(img)
 
@@ -253,6 +332,11 @@ def gradient_magnitude_direction_edge_detection(img):
 
 
 def mask_methods_edge_detection(img):
+    """
+    Performs edge detection on the given image using the mask methods
+    :param img: Image to perform edge detection on
+    :return: Image with edges
+    """
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     res = cv2.filter2D(img, -1, mask_methods_kernel)
     res = res / np.max(res) * 255
@@ -261,6 +345,11 @@ def mask_methods_edge_detection(img):
 
 
 def laplacian_operator_edge_detection(img):
+    """
+    Performs edge detection on the given image using the Laplacian operator
+    :param img: Image to perform edge detection on
+    :return: Image with edges
+    """
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     kernel = np.ones((3, 3))
 
@@ -279,6 +368,11 @@ def laplacian_operator_edge_detection(img):
 
 
 def line_detection_edge_detection(img):
+    """
+    Performs line detection on the given image using the Hough transform
+    :param img: Image to perform line detection on
+    :return: Image with red lines on it
+    """
     res = np.copy(img)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -292,6 +386,11 @@ def line_detection_edge_detection(img):
 
 
 def point_detection_edge_detection(img):
+    """
+    Performs point detection on the given image
+    :param img: Image to perform point detection on
+    :return: Image with red points on it
+    """
     res = np.copy(img)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     mask = np.array([[-1 / 8, -1 / 8, -1 / 8], [-1 / 8, 1, -1 / 8], [-1 / 8, -1 / 8, -1 / 8]])
@@ -305,6 +404,11 @@ def point_detection_edge_detection(img):
 
 
 def canny_edge_detection(img):
+    """
+    Performs edge detection on the given image using the Canny edge detector
+    :param img: Image to perform edge detection on
+    :return: Image with edges
+    """
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     size = int(2 * (np.ceil(3 * canny_sigma)) + 1)
@@ -365,10 +469,20 @@ def canny_edge_detection(img):
 
 
 def canny_edge_detection_opencv(img):
+    """
+    Performs edge detection on the given image using the Canny edge detector (OpenCV implementation)
+    :param img: Image to perform edge detection on
+    :return: Image with edges
+    """
     return cv2.Canny(img, canny_lower_thresh, canny_upper_thresh)
 
 
 def marr_hildreth_edge_detection(img):
+    """
+    Performs edge detection on the given image using the Marr-Hildreth edge detector
+    :param img: Image to perform edge detection on
+    :return: Image with edges
+    """
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     size = int(2 * (np.ceil(3 * marr_hildreth_sigma)) + 1)
@@ -403,6 +517,11 @@ def marr_hildreth_edge_detection(img):
 
 
 def generate_button_callback():
+    """
+    Callback for the generate button
+    Creates new image with the selected options applied to it
+    :return: None
+    """
     global imgs
     edge_detection = [defined_direction_edge_detection, gradient_magnitude_direction_edge_detection,
                       mask_methods_edge_detection, laplacian_operator_edge_detection, line_detection_edge_detection,
@@ -419,6 +538,11 @@ def generate_button_callback():
 
 
 def blur_button_callback():
+    """
+    Callback for the blur button
+    Blurs the current image with the selected blur kernel size
+    :return: None
+    """
     global imgs, threshold_value
     img = imgs[list(imgs.keys())[current_img]]["img"]
     res = cv2.GaussianBlur(img, (blur_kernel_size, blur_kernel_size), 0)
@@ -430,6 +554,11 @@ def blur_button_callback():
 
 
 def threshold_button_callback():
+    """
+    Callback for the threshold button
+    Thresholds the current image with the selected threshold value
+    :return: None
+    """
     global imgs, threshold_value
     img = imgs[list(imgs.keys())[current_img]]["img"]
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -446,6 +575,9 @@ def threshold_button_callback():
 
 
 def main():
+    """
+    Main function
+    """
     global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, \
         show_blur_window, blur_kernel_size, show_threshold_window, show_save_as_dialog, imgs, current_img, \
         current_edge_detection_method, otsu_threshold, threshold_value, laplacian_square, \
